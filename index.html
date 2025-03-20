@@ -4,20 +4,276 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+		<title>Intro to ORMs</title>
 
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
-		<link rel="stylesheet" href="dist/theme/black.css">
+		<link rel="stylesheet" href="dist/theme/moon.css">
 
 		<!-- Theme used for syntax highlighted code -->
 		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+
+		<style type="text/css">
+			:root {
+				--r-heading1-size: 2.5em;
+				--r-heading2-size: 1.5em;
+				--r-heading3-size: 1.2em;
+				--r-main-font-size: 24pt;
+			}
+			.reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+				text-transform: none;
+				text-align: left;
+			}
+
+			.reveal h3 {
+				margin-top: 1em;
+				margin-bottom: 0.2em;
+			}
+
+			.reveal li {
+				margin-left: 1em;
+			}
+
+			section.present, 
+			p {
+				text-align: left;
+			}
+
+		
+
+		</style>
 	</head>
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>
+					<h1>Intro to Object-Relational Mapping (ORM)</h1>
+				</section>
+				<section>
+					<h2>What is an ORM?</h2>
+					<ul>
+						<li>
+							Bidirectionally convert data between relational database records and objects in an object-oriented language.
+						</li>
+						<li>
+							Allows idiomatic object-oriented programming.
+						</li>
+					</ul>
+					<aside class="notes">
+						The first bullet is more or less the mechanical stuff an ORM will do.
+						The second bullet is really the whole key to why we would use an ORM.
+						It makes working in an object-oriented language much more natural.
+					</aside>
+				</section>
+				<section>
+					<h2>ORMs in regular use in 2025</h2>
+					<h3>Java/Jakarta Persistence API (JPA)</h3>
+					<ul>
+						<li>Hibernate</li>
+						<li>EclipseLink</li>
+					</ul>
+					<h3>Python</h3>
+					<ul>
+						<li>SQL Alchemy</li>
+						<li>Django Models</li>
+					</ul>
+					<h3>.NET</h3>
+					<ul>
+						<li>Microsoft Entity Framework</li>
+					</ul>
+					<aside class="notes">
+						These are some ORMs you may have run across, but this is nowhere near a comprehensive list.
+						I'm calling out Java <em>JPA</em> libraries specifically because these are what I have the most experience with, 
+						but there definitely are other notable ORM or ORM-adjacent libraries like JOOQ. I just don't know very much about it.
+					</aside>
+				</section>
+				<section>
+					<h2>Common Features</h2>
+					<ul>
+						<li>Map records to Objects</li>
+						<li>Relate Objects to other Objects</li>
+						<li>Most have a specific query language</li>
+						<li>Criteria queries</li>
+						<li>Always able to write raw SQL queries</li>
+						<li>Optimize queries automatically</li>
+						<li>Auto DDL generation</li>
+					</ul>
+					<aside class="notes">
+						<p>
+							Mapping records to "Entity" objects &mdash; It's pretty much what it says on the tin. The ORM handles all the messy
+							work that converts between database native data types and the programming language's native data types,
+							and data is organized within instance objects as data is gathered.
+							Much of that just happens automatically, but there are a bunch of mechanisms to do custom conversions between types.
+							The main point here is to make it very easy to create data objects easily without having to build and maintain
+							every conversion. Anybody who's worked with a JDBC ResultSet will know that it's doable in plain JDBC, but it sure is a pain.
+						</p>
+						<p>
+							Rather than leaning heavily on table joins as is common in SQL, Entites may have relationships defined between 
+							them, and the ORM will take care of either making the join during the first object's querying, or 
+							making a subsequent query if the related object is accessed through a getter.
+							The idea here is to make a much more reusable data model rather than making multiple bespoke SQL queries that
+							won't be as reusable.
+						</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Mapping records to Objects</h2>
+				</section>
+				<section>
+					<h2>Relating Objects to other Objects</h2>
+				</section>
+				<section>
+					<h2>Query languages</h2>
+					<h3>Examples</h3>
+					<ul>
+						<li>Java Persistence Query Language (JPQL) for Hibernate and EclipseLink</li>
+						<li>Language-INtegrated Query (LINQ) for .NET</li>
+						<li></li>
+					</ul>
+				</section>
+				<section>
+					<h2>Query optimization: Flushing</h2>
+					<p>
+						Flushing means updating the database to match what's in memory.
+					</p>
+					<ul>
+						<li>Done automatically with the close of a transaction.</li>
+						<li>ORM will also flush some objects if new queries would depend on the object's updates</li>
+						<li>May be done at any time - but don't do that without a very good reason.</li>
+					</ul>
+					<aside class="notes">
+						<p>
+							Generally, it's best let the ORM decide when to write to the database. 
+							This lets the ORM collect changes to the entity/object and only write the last change, 
+							preventing a bunch of unneeded queries.
+						</p>
+						<p>
+							One example of a reason to manually flush is if you have a chicken/egg situation where 
+							database data is running parallel to filesystem data, and both need to be consistent.
+							You can flush before writing to the filesystem, keeping the transaction open.
+							If the database write succeeds, but the filesystem write fails, you can still throw
+							an exception and rollback the transaction.
+						</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Auto DDL Generation</h2>
+					<ul>
+						<li>Use with caution in production</li>
+						<li>Very useful for integration tests</li>
+					</ul>
+					<aside class="notes">
+						<p>
+							Generally, it's frowned upon to use Hibernate auto-ddl in production, because the results can get unpredictable.
+							Database-specific features won't be supported. Standard SQL only. (What's the specific spec?)
+						</p>
+						<p>
+							For fresh databases such as in an isolated integration test in a throwaway database, it's extremely handy.
+							Database tables are automatically created to match the defined entities, including keys, field types, constraints, foreign keys, etc.
+							Additional raw SQL to be run at startup can be specified, or raw SQL mutation queries can, as always, still be run.
+						</p>
+						<p>
+							Maven/JUnit definition of Integration Test. Other definitions exist.
+						</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Relationship Pitfalls: The n + 1 problem</h2>
+					<p>
+						Performance suffers when one or more queries are performed for each object in a list.
+					</p>
+					<h3>Example</h3>
+					<p>
+						Working from a list of exposures
+						<pre>
+							<code data-trim data-noescape>
+								SELECT * FROM exposures
+								WHERE program = 12345 AND observation = 1 AND visit = 1;
+							</code>
+						</pre>
+					</p>
+					<p>
+						And then getting exposure specification for each exposure 
+						<pre>
+							<code data-trim data-noescape>
+								SELECT * from miri_exposure_specification
+								WHERE program = 12345 AND observation = 1 AND visit = 1
+									AND order_number = @exposure_specification_order_number ;
+							</code>
+						</pre>
+					</p>
+					<p>
+						Resulting in a performance problem due to all the overhead of setting up 
+						and tearing down a query, and sending that query over the network.
+					</p>
+					<aside class="notes">
+						<p>The obvious answer here is to use joins, which brings us to...</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Relationship pitfalls: Where Joins are problematic</h2>
+					<p>
+						Using a join to solve the n + 1 problem
+						<pre>
+							<code data-trim data-noescape>
+								SELECT e.*, mes.* FROM exposures e 
+									LEFT JOIN miri_exposure_specification 
+										ON mes.program = e.program AND ...
+							</code>
+						</pre>
+					</p>
+					<p>
+						OK if only a few miri_exposure_specification records per exposure.
+					</p>
+					<p>
+						If <em>many</em> miri_exposure_specification per exposure, the result set will include 
+						duplicate data for each exposure that has multiple miri_exposure_specification records.
+					</p>
+					<p>
+						The size of the data transfer over the network can quickly become worse than the problems
+						caused by the n + 1 approach.
+					</p>
+					<p>
+						Worse, if you have two joins, you have duplicated data for both the primary table,
+						and duplicated data for each join for each record in each join.
+					</p>
+					<aside class="notes">
+						<p>Unfortunately, there's no single answer - it depends on the data.</p>
+						<p>So far, we've only talked about SQL. So how does this work in an ORM?</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Relationship pitfalls: Lazy vs. Eager loading</h2>
+					<h3>Lazy loading</h3>
+					<p>
+						Runs a separate SQL query only when a getter is used to access a list of related objects. Best when
+						<ul>
+							<li>Lists of related objects could be large</li>
+							<li>When the relationship isn't always used.</li>
+						</ul>
+					</p>
+					<h3>Eager loading</h3>
+					<p>
+						Creates a join query such that related objects are included in the parent query. Best when
+						<ul>
+							<li>Related objects will always be needed</li>
+							<li>Number of related objects per record is small</li>
+							<li>Only a single one-to-many relationship is present</li>
+						</ul>
+					</p>
+				</section>
+				<section>
+					<h2>Situational loading</h2>
+					<p>In plain SQL, just write a different query, but that's not reusable.</p>
+					<p>Some ORMs allow you to specify loading situationally.</p>
+					<p>In JPA, use Entity Graphs.</p>
+				</section>
+				<section>
+					<h2>Beware of Stamp Coupling</h2>
+					<p>Overspecified entities with constraints the code isn't using.</p>
+					<p>Only specify the fields you're actually using in your code.</p>
+					<p>If you don't do that, somebody can change somethign that breaks, and <em>you aren't even using it!</em></p>
+				</section>
 			</div>
 		</div>
 
