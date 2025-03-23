@@ -22,7 +22,18 @@
 			}
 			.reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
 				text-transform: none;
+			}
+
+			.reveal h1 {
+				text-align: center;
+			}
+			
+			.reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
 				text-align: left;
+			}
+
+			.reveal h2 {
+				border-bottom: 1px solid #93a1a1;
 			}
 
 			.reveal h3 {
@@ -39,13 +50,42 @@
 				text-align: left;
 			}
 
-		
+			table.layout,
+			table.layout tr,
+			table.layout td {
+				border: none;
+			}
+
+			table.layout td {
+				padding: 1em;
+			}
+
+			td.highlighted-cell {
+				background-color: #93a1a1;
+				color: #002b36;
+				border-radius: 10px;
+			}
+
+			div.two-column {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+			}
+
+			div.two-column > div {
+				font-size: 14pt;
+			}
+
+
+			.reveal pre code {
+				font-size: 14pt;
+				line-height: 16pt;
+			}
 
 		</style>
 	</head>
 	<body>
 		<div class="reveal">
-			<div class="slides">
+			<div class="slides" style="width:100vw; margin:0;">
 				<section>
 					<h1>Intro to Object-Relational Mapping (ORM)</h1>
 				</section>
@@ -53,16 +93,16 @@
 					<h2>What is an ORM?</h2>
 					<ul>
 						<li>
-							Bidirectionally convert data between relational database records and objects in an object-oriented language.
+							Bidirectionally map data between relational database records and objects in an object-oriented language.
 						</li>
 						<li>
 							Allows idiomatic object-oriented programming.
 						</li>
 					</ul>
 					<aside class="notes">
-						The first bullet is more or less the mechanical stuff an ORM will do.
-						The second bullet is really the whole key to why we would use an ORM.
-						It makes working in an object-oriented language much more natural.
+						<p>The first bullet is more or less the mechanical stuff an ORM will do.</p>
+						<p>The second bullet is really the whole key to why we would use an ORM.
+						It makes working in an object-oriented language much more natural.</p>
 					</aside>
 				</section>
 				<section>
@@ -88,16 +128,19 @@
 					</aside>
 				</section>
 				<section>
-					<h2>Common Features</h2>
-					<ul>
-						<li>Map records to Objects</li>
-						<li>Relate Objects to other Objects</li>
-						<li>Most have a specific query language</li>
-						<li>Criteria queries</li>
-						<li>Always able to write raw SQL queries</li>
-						<li>Optimize queries automatically</li>
-						<li>Auto DDL generation</li>
-					</ul>
+					<h2>Primary Features</h2>
+					<table class="layout" style="border-spacing: 20px 20px; border-collapse: separate;">
+						<tr>
+							<td class="highlighted-cell">Map DB records to <em>entity</em> objects</td>
+							<td class="highlighted-cell">Relate entities to other entities</td>
+							<td class="highlighted-cell">Automated query optimization</td>
+						</tr>
+						<tr>
+							<td class="highlighted-cell">Object-oriented querying</td>
+							<td class="highlighted-cell">Auto DDL</td>
+							<td></td>
+						</tr>
+					</table>
 					<aside class="notes">
 						<p>
 							Mapping records to "Entity" objects &mdash; It's pretty much what it says on the tin. The ORM handles all the messy
@@ -118,9 +161,121 @@
 				</section>
 				<section>
 					<h2>Mapping records to Objects</h2>
+					<div class="two-column">
+						<div style="grid-column: 1/3;">
+							<table>
+								<tr>
+									<th>package_name</th>
+									<th>baseline</th>
+									<th>opgs_version</th>
+									<th>oss_version</th>
+									<th>create_time</th>
+									<th>package_status</th>
+								</tr>
+								<tr><td>16180621c</td><td>gnc1618_24jun21</td><td>16.3</td><td>9.3</td><td>2017-11-30 14:03:15 -05:00</td><td>CREATED</td></tr>
+								<tr><td>2202801f01</td><td>FLIGHT</td><td>14.16</td><td>8.2</td><td>2016-10-19 12:52:17 -04:00</td><td>FULL_UPLINK</td></tr>
+								<tr><td>2202801t01</td><td>rjl</td><td>14.16</td><td>8.2</td><td>2017-10-17 11:47:12 -04:00</td><td>FAILED_VALIDATION</td></tr>
+							</table>
+						</div>
+						<div>
+							<pre>
+								<code data-trim class="language-sql">
+									SELECT package_name,
+										baseline,
+										opgs_version,
+										oss_version,
+										create_time,
+										package_status
+									FROM opgs_packages;
+								</code>
+							</pre>
+						</div>
+						<div>
+							<pre>
+								<code data-trim class="language-java">
+									public class OpgsPackage {
+										private String packageName;
+										private String baseline;
+										private String ossVersion;
+										private ZonedDateTime createTime;
+										private PackageStatus packageStatus;
+									}
+								</code>
+							</pre>
+						</div>
+					</div>
+				</section>
+				<section>
+					<h2>Mapping records to Objects - JDBC vs. JPA</h2>
+					<div class="two-column">
+						<div>
+							<h3>JDBC</h3>
+							<pre>
+								<code data-trim class="language-java">
+									public List&lt;OpgsPackage> getOpgsPackages() throws SQLException {
+										DateTimeFormatter dbDateFormatter = 
+												DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
+
+										try (Statement stmt = connection.createStatement()) {
+											String query = "SELECT package_name, baseline," +
+													" oss_version, create_time, package_status" +
+													"FROM opgs_packages";
+											try (ResultSet resultSet = stmt.executeQuery(query)) {
+												List&lt;OpgsPackage> opgsPackages = new ArrayList<>();
+												while(resultSet.next()) {
+													OpgsPackage opgsPackage = new OpgsPackage(
+														resultSet.getString("package_name"),
+														resultSet.getString("baseline"),
+														resultSet.getString("oss_version"),
+														ZonedDateTime.parse(
+															resultSet.getString("create_time"), dbDateFormatter),
+														PackageStatus.valueOf(
+															resultSet.getString("package_status"))
+													);
+												}
+											}
+										}
+									}
+								</code>
+							</pre>
+						</div>
+						<div>
+							<h3>Hibernate/JPA</h3>
+							<pre>
+								<code data-trim class="language-java">
+									public List&lt;OpgsPackage> getOpgsPackages {
+										String query = "FROM OpgsPackage";
+										return entityManager.createQuery(query, OpgsPackage.class)
+												.toList();
+									}
+								</code>
+							</pre>
+						</div>
+					</div>
 				</section>
 				<section>
 					<h2>Relating Objects to other Objects</h2>
+					<aside class="notes">
+						<p>
+							Rather than having to deal with explicit joins and deal with the returned data manually,
+							using ORM relationships allows for a much more idiomatic getters on entity objects.
+						</p>
+					</aside>
+				</section>
+				<section>
+					<h2>Relationship query timing</h2>
+					<aside class="notes">
+						<p>
+							When defining a relationship, one can choose whether or not to add a join to the query,
+							on only query for the related object(s) when the getter is used. 
+						</p>
+						<p>
+							In JPA, this is accomplished setting the fetch type to EAGER or LAZY in the @OneToMany or @ManyToOne annotation.
+						</p>
+						<p>
+							The fetch type can be overridden situationally by using a loadGraph that's either predefined, or on the fly.
+						</p>
+					</aside>
 				</section>
 				<section>
 					<h2>Query languages</h2>
@@ -289,7 +444,8 @@
 				hash: true,
 
 				// Learn about plugins: https://revealjs.com/plugins/
-				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ],
+				width: 1300
 			});
 		</script>
 	</body>
