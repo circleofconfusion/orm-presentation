@@ -205,8 +205,9 @@
 						</div>
 					</div>
 				</section>
+
 				<section>
-					<h2>Mapping records to Objects - JDBC vs. JPA</h2>
+					<h2>Mapping records to Objects &mdash; JDBC vs. JPA</h2>
 					<div class="two-column">
 						<div>
 							<h3>JDBC</h3>
@@ -228,9 +229,10 @@
 														resultSet.getString("baseline"),
 														resultSet.getString("oss_version"),
 														ZonedDateTime.parse(
-															resultSet.getString("create_time"), dbDateFormatter),
+																resultSet.getString("create_time"),
+																dbDateFormatter),
 														PackageStatus.valueOf(
-															resultSet.getString("package_status"))
+																resultSet.getString("package_status"))
 													);
 												}
 											}
@@ -253,6 +255,57 @@
 						</div>
 					</div>
 				</section>
+
+				<section>
+					<h2>Mapping records to Objects &mdash; Defining the model</h2>
+
+					<div class="two-column">
+						<div>
+							<h3>Hibernate/JPA</h3>
+							<pre><code data-trim class="language-java">
+								@Table(name = "opgs_packages", schema = "dbo")
+								public class OpgsPackage {
+									@EmbeddedId
+									private OpgsPackageId id;
+
+									@Column(name = "oss_version", nullable = false, length = 9)
+									private String ossVersion;
+
+									@Enumerated(EnumType.STRING)
+									@Column(name = "package_status", nullable = false, length = 17)
+									private PackageStatus packageStatus;
+    
+									@Column(name = "create_time", nullable = false)
+									private ZonedDateTime createTime;
+								}
+							</code></pre>
+							<pre><code data-trim class="language-java">
+								@Embeddable
+								public class OpgsPackageId implements Serializable {
+									@Column(name = "package_name", nullable = false, length = 11)
+									private String packageName;
+								
+									@Column(name = "baseline", nullable = false, length = 20)
+									private String baseline;
+								}
+							</code></pre>
+						</div>
+						<div>
+							<h3>SQL Alchemy</h3>
+							<pre><code class="language-python" data-trim>
+								class OpgsPackage(ModelBase):
+									__tablename__ = "opgs_packages"
+
+									package_name: Mapped[str] = mapped_column(String, primary_key=True)
+									baseline: Mapped[str] = mapped_column(String, primary_key=True)
+									oss_version: Mapped[str] = mapped_column(String, nullable=False)
+									package_status: Mapped[PackageStatus] = mapped_column(sqlalchemy.Enum("VALIDATED", "TRANSFERRED", "RECEIVED", "FULL_UPLINK"), nullable=False)
+									create_time: Mapped[datetime] = mapped_column(DATETIMEOFFSET, nullable=False)
+							</code></pre>
+						</div>
+					</div>
+				</section>
+
 				<section>
 					<h2>Relating Objects to other Objects</h2>
 					<aside class="notes">
