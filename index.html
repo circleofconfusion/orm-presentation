@@ -90,11 +90,12 @@
 					<h1>Intro to Object-Relational Mapping (ORM)</h1>
 				</section>
 				<section>
-					<h2>What is an ORM?</h2>
+					<h2>What is Object-Relational Mapping?</h2>
 					<ul>
 						<li>
-							Bidirectionally maps data between relational database records and objects in an object-oriented language
+							Bidirectional mapping of data between relational database records and objects in an object-oriented language
 						</li>
+						<li>Colloquially, "an ORM" is a library that implements the mapping</li>
 						<li><em>NOT</em> a replacement for SQL or thinking about SQL</li>
 						<li>
 							Allows idiomatic object-oriented programming
@@ -107,7 +108,7 @@
 							that you still have to think about underlying details of the abstraction.
 							In this case, day-to-day, you use composed objects as normal in an 
 							object-oriented language, but when you need to, or it's advantageous,
-							you can fall back on SQL. 
+							you can fall back on SQL.
 						</p>
 						<p>
 							Idiomatic coding is really the whole key to why we would use an ORM.
@@ -121,13 +122,12 @@
 					<ul>
 						<li>A composable Object that <em>usually</em> represents a table</li>
 						<li>Composed entities make a traversable model of stored state</li>
-						<li>
-							Unit of persistence
-							<ul>
-								<li>The ORM manages the creation of SQL statements under the hood</li>
-								<li>The ORM will also manage the <em>timing</em> of the queries, optimizing for performance</li>
-							</ul>
-						</li>
+					</ul>
+					<h3>Persistence of entities</h3>
+					<ul>
+						<li>Synchronizing what's in memory with what's in the database</li>
+						<li>The ORM manages the creation of SQL statements under the hood</li>
+						<li>The ORM will also manage the <em>timing</em> of the queries, optimizing for performance</li>
 					</ul>
 					<aside class="notes">
 						<p>
@@ -137,11 +137,6 @@
 						<p>
 							By composition, I mean that just as SQL tables can be composed via relationships,
 							entities can be composed just like any other object to represent those relationships.
-						</p>
-						<p>
-							Often, you will hear an entity referred to as a unit of persistence.
-							This means that when adding data to the database, it will be done 
-							via the defined entities.
 						</p>
 					</aside>
 				</section>
