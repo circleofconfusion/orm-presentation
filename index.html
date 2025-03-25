@@ -93,21 +93,62 @@
 					<h2>What is an ORM?</h2>
 					<ul>
 						<li>
-							Bidirectionally map data between relational database records and objects in an object-oriented language.
+							Bidirectionally maps data between relational database records and objects in an object-oriented language
 						</li>
+						<li><em>NOT</em> a replacement for SQL or thinking about SQL</li>
 						<li>
-							Allows idiomatic object-oriented programming.
+							Allows idiomatic object-oriented programming
 						</li>
 					</ul>
 					<aside class="notes">
 						<p>The first bullet is more or less the mechanical stuff an ORM will do.</p>
-						<p>The second bullet is really the whole key to why we would use an ORM.
-						It makes working in an object-oriented language much more natural.</p>
+						<p>
+							ORMs are a leaky abstraction of SQL. Generally, its considered bad
+							that you still have to think about underlying details of the abstraction.
+							In this case, day-to-day, you use composed objects as normal in an 
+							object-oriented language, but when you need to, or it's advantageous,
+							you can fall back on SQL. 
+						</p>
+						<p>
+							Idiomatic coding is really the whole key to why we would use an ORM.
+							It makes working in an object-oriented language much more natural.
+						</p>
 					</aside>
 				</section>
+
+				<section>
+					<h2>Entity</h2>
+					<ul>
+						<li>A composable Object that <em>usually</em> represents a table</li>
+						<li>Composed entities make a traversable model of stored state</li>
+						<li>
+							Unit of persistence
+							<ul>
+								<li>The ORM manages the creation of SQL statements under the hood</li>
+								<li>The ORM will also manage the <em>timing</em> of the queries, optimizing for performance</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes">
+						<p>
+							I say usually, because entities can represent views, 
+							or a custom query that's convenient to work with.
+						</p>
+						<p>
+							By composition, I mean that just as SQL tables can be composed via relationships,
+							entities can be composed just like any other object to represent those relationships.
+						</p>
+						<p>
+							Often, you will hear an entity referred to as a unit of persistence.
+							This means that when adding data to the database, it will be done 
+							via the defined entities.
+						</p>
+					</aside>
+				</section>
+
 				<section>
 					<h2>ORMs in regular use in 2025</h2>
-					<h3>Java/Jakarta Persistence API (JPA)</h3>
+					<h3>Jakarta Persistence API (JPA)</h3>
 					<ul>
 						<li>Hibernate</li>
 						<li>EclipseLink</li>
@@ -123,7 +164,7 @@
 					</ul>
 					<aside class="notes">
 						These are some ORMs you may have run across, but this is nowhere near a comprehensive list.
-						I'm calling out Java <em>JPA</em> libraries specifically because these are what I have the most experience with, 
+						I'm going to focus on Java <em>JPA</em> libraries because these are what I have the most experience with, 
 						but there definitely are other notable ORM or ORM-adjacent libraries like JOOQ. I just don't know very much about it.
 					</aside>
 				</section>
@@ -159,8 +200,13 @@
 						</p>
 					</aside>
 				</section>
+
 				<section>
-					<h2>Mapping records to Objects</h2>
+					<h1>Mapping DB records to Entities</h1>
+				</section>
+
+				<section>
+					<h2>Mapping records to Entities</h2>
 					<div class="two-column">
 						<div style="grid-column: 1/3;">
 							<table>
@@ -207,7 +253,7 @@
 				</section>
 
 				<section>
-					<h2>Mapping records to Objects &mdash; JDBC vs. JPA</h2>
+					<h2>Mapping records to Entities &mdash; JDBC vs. JPA &mdash; SELECT</h2>
 					<div class="two-column">
 						<div>
 							<h3>JDBC</h3>
@@ -257,12 +303,54 @@
 				</section>
 
 				<section>
-					<h2>Mapping records to Objects &mdash; Defining the model</h2>
+					<h2>Mapping records to Entities &mdash; JDBC vs. JPA &mdash; INSERT</h2>
+					<div class="two-column">
+						<div>
+							<h3>JDBC</h3>
+							<pre>
+								<code data-trim class="language-java">
+									public void saveOpgsPackage(OpgsPackage opgsPackage) throws SQLException {
+										DateTimeFormatter dbDateFormatter = 
+												DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
+
+										String insertQuery = "INSERT INTO opgs_packages " +
+												"(package_name, baseline, oss_version, create_time, package_status) " +
+												"VALUES (?,?,?,?,?)";
+										PreparedStatement stmt = connection.prepareStatement();
+										try {
+											stmt.setString(1, opgsPackage.getPackageName());
+											stmt.setString(2, opgsPackage.getBaseline());
+											stmt.setString(3, opgsPackage.getOssVersion());
+											stmt.setString(4, ZonedDateTime.format(
+													opgsPackage.getCreateTime(),
+											   		dbDateFormatter));
+											stmt.setString(5, opgsPackage.getPackageStatus().toString())
+										}
+									}
+								</code>
+							</pre>
+						</div>
+						<div>
+							<h3>Hibernate/JPA</h3>
+							<pre>
+								<code data-trim class="language-java">
+									public void saveOpgsPackage(OpgsPackage opgsPackage) {
+										entityManager.persist(opgsPackage);
+									}
+								</code>
+							</pre>
+						</div>
+					</div>
+				</section>
+
+				<section>
+					<h2>Mapping records to Entities &mdash; Defining the Entity/Model</h2>
 
 					<div class="two-column">
 						<div>
 							<h3>Hibernate/JPA</h3>
-							<pre><code data-trim class="language-java">
+							<pre><code data-trim>
+								@Entity
 								@Table(name = "opgs_packages", schema = "dbo")
 								public class OpgsPackage {
 									@EmbeddedId
@@ -279,7 +367,7 @@
 									private ZonedDateTime createTime;
 								}
 							</code></pre>
-							<pre><code data-trim class="language-java">
+							<pre><code data-trim>
 								@Embeddable
 								public class OpgsPackageId implements Serializable {
 									@Column(name = "package_name", nullable = false, length = 11)
@@ -307,49 +395,219 @@
 				</section>
 
 				<section>
-					<h2>Relating Objects to other Objects</h2>
+					<h1>Relationships - Relating Entities to other Entities</h1>
 					<aside class="notes">
+						<p>
+							This to me is the other really big feature of an ORM.
+						</p>
 						<p>
 							Rather than having to deal with explicit joins and deal with the returned data manually,
 							using ORM relationships allows for a much more idiomatic getters on entity objects.
 						</p>
+						<p>
+							However, relationships definitely need to be approached with some healthy caution.
+							Relationships, when used well, can provide enormous performance benefits.
+							But when misused, can tank performance dramatically.
+						</p>
 					</aside>
 				</section>
+
 				<section>
-					<h2>Relationship query timing</h2>
+					<h2>Relationships &mdash; Entity Relationship definition &mdash; Hibernate/JPA</h2>
+					<pre><code data-noescape data-trim>
+						@Entity
+						@Table(name = "opgs_packages", schema = "dbo")
+						public class OpgsPackage {
+
+							@OneToMany(
+								fetch = FetchType.LAZY,
+								mappedBy = "opgsPackage",
+								cascade = {
+									CascadeType.PERSIST, CascadeType.MERGE,
+									CascadeType.REFRESH, CascadeType.DETACH
+								}
+							)
+							@OrderBy("onboardVisitOrder ASC")
+							private List&lt;OpgsVisit> opgsVisits = new ArrayList&lt;>();
+						}
+					</code></pre>
+					<pre><code data-noescape data-trim>
+						@Entity
+						@Table(name = "opgs_visit", schema = "dbo")
+						public class OpgsVisit {
+
+							@ManyToOne(fetch = FetchType.LAZY)
+							@JoinColumns({
+									@JoinColumn(name = "package_name", referencedColumnName = "package_name",
+											insertable = false, updatable = false),
+									@JoinColumn(name = "baseline", referencedColumnName = "baseline", 
+											insertable = false, updatable = false)
+							})
+							private OpgsPackage opgsPackage;
+						}
+					</code></pre>
 					<aside class="notes">
-						<p>
-							When defining a relationship, one can choose whether or not to add a join to the query,
-							on only query for the related object(s) when the getter is used. 
+						<p>The crux of a relationship is the @JoinColumn(s) annotation(s)
+							from the side of the relationship in SQL would have a foreign key.
+							For example, an OpgsVisit has packageName and baseline fields that
+							act as a compound foreign key to an OpgsPackage.
 						</p>
 						<p>
-							In JPA, this is accomplished setting the fetch type to EAGER or LAZY in the @OneToMany or @ManyToOne annotation.
+							On the OpgsPackage side of the relationship, mappedBy tells OpgsPackage which field
+							in OpgsVisit to refer to for its relationship. The cascade property tells OpgsPackage
+							how to handle changes to its state and how to handle persistence of related objects.
+							For example, CascadeType.PERSIST means that OpgsVisit objects added to the 
+							opgsVisits List should be persisted along with the OpgsPackage itself.
 						</p>
 						<p>
-							The fetch type can be overridden situationally by using a loadGraph that's either predefined, or on the fly.
+							The @OrderBy annotation works pretty much like an ORDER BY clause in a SQL SELECT 
+							statement. When querying for OpgsPackages, the related OpgsVisit objects will be ordered 
+							by the onboard visit order automatically. There's a sneaky little pitfall here, though.
+							If you create a new OpgsPackage, and start adding visits to that ArrayList, they will
+							<em>appear in the order they were added, and won't be sorted by onboard visit order!</em>.
+							In reality, the field type is a List, not an ArrayList, and ArrayList is only used as
+							a default list when newing up an OpgsPackage. Hibernate will give you another object that
+							implements the List interface. (It's a PersistentBag.)
+						</p>
+						<p>
+							The fetch property tells the ORM how and when to gather related data. 
+							We'll talk about that a bit more in a minute.
 						</p>
 					</aside>
 				</section>
+
 				<section>
-					<h2>Query languages</h2>
-					<h3>Examples</h3>
-					<ul>
-						<li>Java Persistence Query Language (JPQL) for Hibernate and EclipseLink</li>
-						<li>Language-INtegrated Query (LINQ) for .NET</li>
-						<li></li>
-					</ul>
+					<h2>Relationships - SELECT related Entities</h2>
+					<pre><code data-trim data-noescape class="language-java">
+						public List&lt;OpgsPackage> findAllOpgsPackages() {
+							String query = "FROM OpgsPackage";
+							return entityManager.createQuery(query, OpgsPackage.class)
+									.toList();
+						}
+					</code></pre>
+					<pre><code data-trim data-noescape class="language-java">
+						List&lt;OpgsPackage> opgsPackages = findAllOpgsPackages();
+
+						// List of OpgsVisit objects related to first package only
+						List&lt;OpgsVisit> firstPackageVisits = opgsPackages.get(0).getOpgsVisits();
+
+						// List of OpgsVisit objects related to second package only
+						List&lt;OpgsVisit> secondPackageVisits = opgsPackages.get(1).getOpgsVisits();
+					</code></pre>
 				</section>
+
 				<section>
-					<h2>Query optimization: Flushing</h2>
+					<h2>Relationships: Lazy vs. Eager loading</h2>
+					<h3>Lazy loading</h3>
 					<p>
-						Flushing means updating the database to match what's in memory.
+						Runs a separate SQL query only when a getter is used. Best when
+						<ul>
+							<li>Lists of related objects could be large</li>
+							<li>Multiple lists of objects are related to entity</li>
+							<li>When the relationship isn't always used</li>
+						</ul>
 					</p>
+					<h3>Eager loading</h3>
+					<p>
+						Creates a join query such that related objects are included in the parent query. Best when
+						<ul>
+							<li>Related objects will <em>always</em> be needed</li>
+							<li>Number of related objects per record is small</li>
+							<li>Only a single one-to-many relationship is present</li>
+						</ul>
+					</p>
+				</section>
+
+				<section>
+					<h2>Situational loading</h2>
+					<p>In plain SQL, just write a different query &mdash; but that's not reusable.</p>
+					<p>Some ORMs allow you to specify loading situationally.</p>
+					<p>In JPA, use Entity Graphs.</p>
+				</section>
+
+				<section>
+					<h2>Relationships - INSERT related Entities</h2>
+					<pre><code data-trim data-noescape class="language-java">
+						OpgsPackage newOpgsPackage = new OpgsPackage(
+							"16180621c", "gnc1618_24jun21", "16.3",
+							ZonedDateTime.of(2017, 11, 30, 14, 3, 15, ZoneId.of("America/New_York"),
+							PackageStatus.CREATED
+						);
+
+						// Tell the EntityManager to "persist" the OpgsPackage
+						entityManager.persist(newOpgsPackage)
+
+						OpgsVisit opgsVisit1 = new OpgsVisit(
+							"16180621c", "00001002003", "gnc1618_24jun21",
+							VisitFileStatus.CREATED, 1024L
+						)
+
+						OpgsVisit opgsVisit2 = new OpgsVisit(
+							"16180621c", "00001002004", "gnc1618_24jun21",
+							VisitFileStatus.CREATED, 2048L
+						)
+
+						// Add the visits to the package
+						newOpgsPackage.addVisit(opgsVisit1);
+						newOpgsPackage.addVisit(opgsVisit2);
+					</code></pre>
+					<aside class="notes">
+						<p>
+							Persisting data is where we really need to start shifting our thinking from queries to relationships,
+							and how the ORM manages queries in the first place.
+						</p>
+						<p>
+							We know that eventually, an INSERT query needs to be sent to the database for each new record we're creating,
+							but how that happens is not necessarily obvious in object-oriented code.
+						</p>
+						<p>
+							This starts out straightforward enough. New up a OpgsPackage.
+							Then use the EntityManager to persist() the package.
+							When thinking in queries, persist() seems like it would be analogous to an INSERT
+						</p>
+						<p>
+							But where are the INSERT statements for the related OpgsVisit objects?
+							There's no call to persist() for them!
+						</p>
+						<p>
+							What really happens when you use persist() is that the ORM takes that as an instruction
+							to eventually insert that object's data into the database, but it doesn't happen until 
+							either a subsequent query needs that data, or the transaction is committed. 
+						</p>
+						<p>
+							For the OpgsVisit objects, since we marked the relationship as Cascade.PERSIST,
+							the ORM will automatically create the INSERT statements for them under the hood.
+							All you have to do is add them to the OpgsPackage.opgsVisits List.
+						</p>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Flushing</h2>
+					<p>The ORM waits as long as possible before doing data mutation queries</p>
 					<ul>
-						<li>Done automatically with the close of a transaction.</li>
-						<li>ORM will also flush some objects if new queries would depend on the object's updates</li>
-						<li>May be done at any time - but don't do that without a very good reason.</li>
+						<li>If the transaction wrapping the persistence session is committed.</li>
+						<li>If the ORM decides that a subsequent query that needs a 
+							previous insert/update/delete to make sense in the new query.</li>
+						<li>If the persistence session is flushed explicity.</li>
 					</ul>
 					<aside class="notes">
+						<p>This seems like a good time to talk a bit about <em>flushing</em>.</p>
+						<p>
+							For performance reasons, the ORM tries to minimize the number of round trips to the
+							database server, since a network connection is always going to be the slowest way to
+							transfer data.
+						</p>
+						<p>
+							For example, if you use several different setters on an entity, you don't want
+							a round trip to the server for each one. Depending on how you're populating your entity, 
+							that might result in an error because a column that's not null would be null since you
+							haven't set that field in the entity yet.
+						</p>
+						<p>
+							Until the persistence session is flushed, no data changes are present on the server.
+						</p>
+						<p>This is why all mutation queries <em>must</em> be part of a transaction.</p>
 						<p>
 							Generally, it's best let the ORM decide when to write to the database. 
 							This lets the ORM collect changes to the entity/object and only write the last change, 
@@ -364,29 +622,9 @@
 						</p>
 					</aside>
 				</section>
+				
 				<section>
-					<h2>Auto DDL Generation</h2>
-					<ul>
-						<li>Use with caution in production</li>
-						<li>Very useful for integration tests</li>
-					</ul>
-					<aside class="notes">
-						<p>
-							Generally, it's frowned upon to use Hibernate auto-ddl in production, because the results can get unpredictable.
-							Database-specific features won't be supported. Standard SQL only. (What's the specific spec?)
-						</p>
-						<p>
-							For fresh databases such as in an isolated integration test in a throwaway database, it's extremely handy.
-							Database tables are automatically created to match the defined entities, including keys, field types, constraints, foreign keys, etc.
-							Additional raw SQL to be run at startup can be specified, or raw SQL mutation queries can, as always, still be run.
-						</p>
-						<p>
-							Maven/JUnit definition of Integration Test. Other definitions exist.
-						</p>
-					</aside>
-				</section>
-				<section>
-					<h2>Relationship Pitfalls: The n + 1 problem</h2>
+					<h2>Relationship Pitfalls &mdash; The n + 1 problem</h2>
 					<p>
 						Performance suffers when one or more queries are performed for each object in a list.
 					</p>
@@ -394,7 +632,7 @@
 					<p>
 						Working from a list of exposures
 						<pre>
-							<code data-trim data-noescape>
+							<code data-trim data-noescape class="language-sql">
 								SELECT * FROM exposures
 								WHERE program = 12345 AND observation = 1 AND visit = 1;
 							</code>
@@ -403,7 +641,7 @@
 					<p>
 						And then getting exposure specification for each exposure 
 						<pre>
-							<code data-trim data-noescape>
+							<code data-trim data-noescape class="language-sql">
 								SELECT * from miri_exposure_specification
 								WHERE program = 12345 AND observation = 1 AND visit = 1
 									AND order_number = @exposure_specification_order_number ;
@@ -415,72 +653,153 @@
 						and tearing down a query, and sending that query over the network.
 					</p>
 					<aside class="notes">
-						<p>The obvious answer here is to use joins, which brings us to...</p>
+						<p>The obvious answer here is to use joins, whether traditional SQL or object-oriented. 
+							Which brings us to...</p>
 					</aside>
 				</section>
+				
 				<section>
-					<h2>Relationship pitfalls: Where Joins are problematic</h2>
+					<h2>Relationship pitfalls &mdash; Where Joins are problematic</h2>
 					<p>
 						Using a join to solve the n + 1 problem
 						<pre>
-							<code data-trim data-noescape>
-								SELECT e.*, mes.* FROM exposures e 
-									LEFT JOIN miri_exposure_specification 
+							<code data-trim data-noescape class="language-sql">
+								SELECT e.*, mes.* FROM miri_exposure_specification mes 
+									LEFT JOIN exposures e 
 										ON mes.program = e.program AND ...
 							</code>
 						</pre>
 					</p>
-					<p>
-						OK if only a few miri_exposure_specification records per exposure.
-					</p>
-					<p>
-						If <em>many</em> miri_exposure_specification per exposure, the result set will include 
-						duplicate data for each exposure that has multiple miri_exposure_specification records.
-					</p>
-					<p>
-						The size of the data transfer over the network can quickly become worse than the problems
-						caused by the n + 1 approach.
-					</p>
-					<p>
-						Worse, if you have two joins, you have duplicated data for both the primary table,
-						and duplicated data for each join for each record in each join.
-					</p>
+					<p>But what happens if there are multiple joins?</p>
 					<aside class="notes">
-						<p>Unfortunately, there's no single answer - it depends on the data.</p>
-						<p>So far, we've only talked about SQL. So how does this work in an ORM?</p>
+						<p>
+							If <em>many</em> miri_exposure_specification per exposure, the result set will include 
+							duplicate data for each exposure that has multiple miri_exposure_specification records.
+						</p>
+						<p>
+							This isn't particularly a problem if there's only one one-to-many relationship.
+						</p>
+						<p>
+							But if there are two or more joins, you have duplicated data for both the primary table,
+							and duplicated data for each join for each record in each join.
+							
+						</p>
+						<p>So what's ideal? Unfortunately, there's no single answer - it depends on the data.</p>
 					</aside>
 				</section>
+
 				<section>
-					<h2>Relationship pitfalls: Lazy vs. Eager loading</h2>
-					<h3>Lazy loading</h3>
-					<p>
-						Runs a separate SQL query only when a getter is used to access a list of related objects. Best when
-						<ul>
-							<li>Lists of related objects could be large</li>
-							<li>When the relationship isn't always used.</li>
-						</ul>
-					</p>
-					<h3>Eager loading</h3>
-					<p>
-						Creates a join query such that related objects are included in the parent query. Best when
-						<ul>
-							<li>Related objects will always be needed</li>
-							<li>Number of related objects per record is small</li>
-							<li>Only a single one-to-many relationship is present</li>
-						</ul>
-					</p>
+					<h1>Making queries</h1>
+					<aside class="notes">
+						<p>Let's talk a little bit about the query APIs that ORMs typically offer.</p>
+					</aside>
 				</section>
+
 				<section>
-					<h2>Situational loading</h2>
-					<p>In plain SQL, just write a different query, but that's not reusable.</p>
-					<p>Some ORMs allow you to specify loading situationally.</p>
-					<p>In JPA, use Entity Graphs.</p>
+					<h2>Making Queries &mdash; Query APIs</h3>
+					<ul>
+						<li>JPA Criteria Query API</li>
+						<li>Entity Framework Core API</li>
+						<li>SQL Alchemy Query API</li>
+					</ul>
+					<pre><code class="language-java" data-trim data-noescape>
+						CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+						CriteriaQuery&lt;OpgsPackage> cr = cb.createQuery(OpgsPackage.class);
+						Root&lt;OpgsPackage> root = cr.from(OpgsPackage.class);
+						cr.select(root);
+						
+						Query&lt;OpgsPackage> query = entityManager.createQuery(cr);
+						List&lt;OpgsPackage> opgsPackages = query.getResultList();
+					</code></pre>
+					<aside class="notes">
+						<p>One of the ways to query for data is to use an API that sort of mimics
+							the parts of a query.
+						</p>
+						<p>Personally, I find this to be a bit clunky in most situations, but this
+							is definitely just a matter of taste.
+						</p>
+						<p>
+							I do keep this kind of query in my back pocket for situations where
+							building a complex query string full of subqueries would get really messy and hard to read.
+						</p>
+					</aside>
 				</section>
+
 				<section>
-					<h2>Beware of Stamp Coupling</h2>
-					<p>Overspecified entities with constraints the code isn't using.</p>
-					<p>Only specify the fields you're actually using in your code.</p>
-					<p>If you don't do that, somebody can change somethign that breaks, and <em>you aren't even using it!</em></p>
+					<h2>Making queries &mdash; Object-oriented query languages</h2>
+					<h3>Object-oriented query languages</h3>
+					<ul>
+						<li>Java Persistence Query Language (JPQL) for Hibernate and EclipseLink</li>
+						<li>Language-INtegrated Query (LINQ) for .NET</li>
+					</ul>
+					<pre><code class="language-java" data-trim data-noescape>
+						public List&lt;OpgsPackage> getOpgsPackagesOnBaseline(String baseline) {
+							String query = "FROM OpgsPackage op WHERE op.id.baseline = :baseline";
+							return entityManager.createQuery(query, OpgsPackage.class)
+									.setParameter("baseline", baseline)
+									.toList();
+						}
+					</code></pre>
+					<aside class="notes">
+						<p>
+							This looks pretty similar to SQL, but rather than querying for <em>columns</em>
+							you instead query for whole <em>entities</em>.
+						</p>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Making Queries &mdash; Native SQL queries</h2>
+					<p>Every ORM will allow you to fall back on native SQL for that one weird edge case.</p>
+				</section>
+				
+				<section>
+					<h2>Auto DDL Generation</h2>
+					<ul>
+						<li>Use with caution in production</li>
+						<li>Very useful for integration tests</li>
+					</ul>
+					<aside class="notes">
+						<p>
+							Auto DDL essentially builds a set of DDL create statements based on the entity model.
+							It creates a bunch of tables in an empty database automatically.
+						</p>
+						<p>
+							Generally, it's frowned upon to use Hibernate auto-ddl in production.
+							Database-specific features can sometimes be supported, but it gets wonky.
+						</p>
+						<p>
+							For fresh databases such as in an isolated integration test in a throwaway database, it's extremely handy.
+							Database tables are automatically created to match the defined entities, including keys, field types, constraints, foreign keys, etc.
+							Additional raw SQL to be run at startup can be specified, or raw SQL mutation queries can, as always, still be run.
+						</p>
+						<p>
+							Maven/JUnit definition of Integration Test. Other definitions exist.
+						</p>
+					</aside>
+				</section>
+
+				<section>
+					<h1>Conclusions</h1>
+				</section>
+
+				<section>
+					<h2>Conclusions &mdash; When would one use or not use an ORM?</h2>
+					<ul>
+						<li>Great for projects big enough to have a lot of very similar queries</li>
+						<li>Massive overkill for small, simple projects with few queries</li>
+						<li>The team is still learning to use SQL? Don't use an ORM.</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>Conclusions &mdash; Other random thoughts</h2>
+					<ul>
+						<li>ORMs really help with code readability and consistency</li>
+						<li>Code for readability first, then work out performance tweaks based on real-world timing data</li>
+						<li>Make use of debug logs when trying to figure out what the ORM thinks it's doing</li>
+						<li>ORMs 👏 are 👏 not 👏 substitutes 👏 for 👏 knowing 👏 SQL</li>
+					</ul>
 				</section>
 			</div>
 		</div>
